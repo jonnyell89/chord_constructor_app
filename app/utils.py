@@ -28,7 +28,7 @@ def calculate_interval(chromatic_scale: List[str], root_index: int, note_type: s
 
         chromatic_scale (List[str]): A list of strings representing the twelve note chromatic scale.
         root_index (int): The index position of the root note in the chromatic scale.
-        note_type (str): The note 
+        note_type (str): The target note from the chromatic scale. 
 
     Returns:
 
