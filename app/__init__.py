@@ -5,6 +5,6 @@ __all__ = [
 
     "Chord",
     "calculate_note",
-    "calculate_interval"
+    "calculate_interval",
     
 ]

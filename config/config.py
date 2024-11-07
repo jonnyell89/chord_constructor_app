@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Dict
+
+from app.library.enums import RootType, SecondType, ThirdType, FourthType, FifthType, SixthType, SeventhType, NinthType, EleventhType, ThirteenthType
 
 CHROMATIC_SCALE: List[str] = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 
-INTERVALS: List[str] = ["R", "b2", "2", "3m", "3M", "4", "b5", "5", "#5", "6", "7m", "7M", "8", "b9", "9", "#9", "b11", "11", "#11", "12", "b13", "13", "#13"]
-
-INTERVALS_DICT = {
+INTERVAL_DICT: Dict[str, int] = {
     
     "unison": 0,
     "minor_second": 1,
@@ -33,3 +33,27 @@ INTERVALS_DICT = {
     "major_thirteenth": 21
 
     }
+
+INTERVAL_DEPENDENCIES: Dict[str, List[str]] = {
+
+    "seventh": ["root", "third", "fifth"],
+    "ninth": ["root", "third", "fifth", "seventh"],
+    "eleventh": ["root", "third", "fifth", "seventh", "ninth"],
+    "thirteenth": ["root", "third", "fifth", "seventh", "ninth", "eleventh"]
+
+}
+
+DEFAULT_INTERVAL_TYPES = {
+
+    "root": RootType.C,
+    "second": SecondType.ADD2,
+    "third": ThirdType.MAJOR,
+    "fourth": FourthType.ADD4,
+    "fifth": FifthType.PERFECT,
+    "sixth": SixthType.ADD6,
+    "seventh": SeventhType.MINOR,
+    "ninth": NinthType.MAJOR,
+    "eleventh": EleventhType.PERFECT,
+    "thirteenth": ThirteenthType.MAJOR
+
+}

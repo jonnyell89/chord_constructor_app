@@ -1,9 +1,7 @@
 import pytest
 
 from app.chord import Chord
-from app.utils import calculate_note, calculate_interval
-from app.library.enums import RootType, ThirdType, FifthType, SeventhType, NinthType, EleventhType, ThirteenthType, ExtensionType, AddType
-from config.config import CHROMATIC_SCALE, INTERVALS_DICT
+from app.library.enums import RootType, ThirdType, FifthType, SeventhType, NinthType, EleventhType, ThirteenthType
 
 def test_chord_instantiation_with_default_values():
 

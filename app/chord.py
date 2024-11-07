@@ -2,14 +2,14 @@ from typing import List, Optional
 
 from app.utils import calculate_note, calculate_interval
 from app.library.enums import RootType, SecondType, ThirdType, FourthType, FifthType, SixthType, SeventhType, NinthType, EleventhType, ThirteenthType, ExtensionType, AddType
-from config.config import CHROMATIC_SCALE, INTERVALS_DICT
+from config.config import CHROMATIC_SCALE, INTERVAL_DICT, INTERVAL_DEPENDENCIES, DEFAULT_INTERVAL_TYPES
 
 class Chord:
 
     """
-    A class to construct chords, built of up to seven notes.
+    A class to construct chords, built of a maximum of ten notes.
 
-    The root note defines the fundamental tone of the chord, and the optional third, fifth, seventh, ninth, eleventh and thirteenth notes shape the chord's overall quality.
+    The root note defines the fundamental tone of the chord, and the optional second, third, fourth, fifth, sixth, seventh, ninth, eleventh and thirteenth notes shape the chord's overall quality.
 
     If only a root note is provided, the third note defaults to major, and the fifth note defaults to perfect.
 
@@ -17,7 +17,7 @@ class Chord:
 
         root_type (RootType): The root note of the chord.
         root_note (str): The string representation of the root note.
-        _root_index (int): The index position of the root note in the chromatic scale.
+        root_index (int): The index position of the root note in the chromatic scale.
 
         third_type (ThirdType): The type of third interval, including sus2, minor, major and sus4.
         third_note (str): The string representation of the third note.
@@ -50,46 +50,49 @@ class Chord:
     """
 
     def __init__(self, 
-                 root_type: RootType, 
-                 third_type: ThirdType = None,
-                 fifth_type: FifthType = None,
+                 root_type: RootType = DEFAULT_INTERVAL_TYPES.get("root"),
+                 second_type: SecondType = None, 
+                 third_type: ThirdType = DEFAULT_INTERVAL_TYPES.get("third"),
+                 fourth_type: FourthType = None,
+                 fifth_type: FifthType = DEFAULT_INTERVAL_TYPES.get("fifth"),
+                 sixth_type: SixthType = None,
                  seventh_type: SeventhType = None,
                  ninth_type: NinthType = None,
                  eleventh_type: EleventhType = None,
-                 thirteenth_type: ThirteenthType = None
+                 thirteenth_type: ThirteenthType = None,
                  ):
 
-        # Initialises the fundamental tone of the chord
+        # Initialises the fundamental tone of the chord.
         self.root_type: RootType = root_type
-        # Initialises the string representation of the root note
+        # Initialises the string representation of the root note.
         self.root_note: str = self.root_type.value
         # Initialises the root index, essential to all calculate_note operations.
-        self._root_index: int = CHROMATIC_SCALE.index(self.root_note)
+        self.root_index: int = CHROMATIC_SCALE.index(self.root_note)
 
         # Initialises the third interval type, defaulting to major if not provided.
-        self.third_type: ThirdType = third_type or ThirdType.MAJOR
+        self.third_type: ThirdType = third_type
         # Calculates the third note, relative to the root note.
-        self.third_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.third_type.value])
+        self.third_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.third_type.value])
         # Calculates the interval value of the third note in the chord, relative to the root note.
-        self.third_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.third_note)
+        self.third_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.third_note)
 
         # Initialises the fifth interval type, defaulting to perfect if not provided.
-        self.fifth_type: FifthType = fifth_type or FifthType.PERFECT
+        self.fifth_type: FifthType = fifth_type
         # Calculates the fifth note, relative to the root note.
-        self.fifth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.fifth_type.value])
+        self.fifth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.fifth_type.value])
         # Calculates the interval value of the fifth note in the chord, relative to the root note.
-        self.fifth_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.fifth_note)
+        self.fifth_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.fifth_note)
 
-        # Initialises optional interval types to None
-        self.second_type: Optional[SecondType] = None
-        self.fourth_type: Optional[FourthType] = None
-        self.sixth_type: Optional[SixthType] = None
-        self.seventh_type: Optional[SeventhType] = None
-        self.ninth_type: Optional[NinthType] = None
-        self.eleventh_type: Optional[EleventhType] = None
-        self.thirteenth_type: Optional[ThirteenthType] = None
+        # Initialises optional interval types
+        self.second_type: Optional[SecondType] = second_type or None
+        self.fourth_type: Optional[FourthType] = fourth_type or None
+        self.sixth_type: Optional[SixthType] = sixth_type or None
+        self.seventh_type: Optional[SeventhType] = seventh_type or None
+        self.ninth_type: Optional[NinthType] = ninth_type or None
+        self.eleventh_type: Optional[EleventhType] = eleventh_type or None
+        self.thirteenth_type: Optional[ThirteenthType] = thirteenth_type or None
 
-        # Initialises optional notes to None
+        # Initialises optional notes
         self.second_note: Optional[str] = None
         self.fourth_note: Optional[str] = None
         self.sixth_note: Optional[str] = None
@@ -98,7 +101,7 @@ class Chord:
         self.eleventh_note: Optional[str] = None
         self.thirteenth_note: Optional[str] = None
 
-        # Initialises optional interval values to None
+        # Initialises optional interval values
         self.second_interval: Optional[int] = None
         self.fourth_interval: Optional[int] = None
         self.sixth_interval: Optional[int] = None
@@ -107,34 +110,51 @@ class Chord:
         self.eleventh_interval: Optional[int] = None
         self.thirteenth_interval: Optional[int] = None
 
-        """
-        This if statement block ensures that, if any of the seventh, ninth, eleventh or thirteenth interval types are provided, all preceding optional interval types and interval values are initialised in sequence.
+        # Stores the names of the optional intervals.
+        optional_intervals: List[str] = ["second", "fourth", "sixth", "seventh", "ninth", "eleventh", "thirteenth"]
 
-        """
+        # Ensures the interval dependencies are resolved correctly by iterating over the optional intervals in reverse order.
+        for interval_name in optional_intervals[::-1]:
+            
+            interval_type = getattr(self, f"{interval_name}_type")
 
-        if seventh_type or ninth_type or eleventh_type or thirteenth_type:
+            if interval_type:
 
-            self.seventh_type: SeventhType = seventh_type or SeventhType.MINOR
-            self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.seventh_type.value])
-            self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.seventh_note)
+                self.set_chord_factor(interval_name, interval_type)
 
-        if ninth_type or eleventh_type or thirteenth_type:
+                # Retrieves the list of interval dependencies that correspond to the optional interval.
+                interval_dependencies: List[str] = INTERVAL_DEPENDENCIES.get(interval_name)
 
-            self.ninth_type: NinthType = ninth_type or NinthType.MAJOR
-            self.ninth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.ninth_type.value])
-            self.ninth_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.ninth_note)
+                for interval_dependency in interval_dependencies[::-1]:
 
-        if eleventh_type or thirteenth_type:
+                    interval_dependency_type = getattr(self, f"{interval_dependency}_type")
 
-            self.eleventh_type: EleventhType = eleventh_type or EleventhType.PERFECT
-            self.eleventh_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.eleventh_type.value])
-            self.eleventh_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.eleventh_note)
+                    # Sets a default interval if the interval dependency is unassigned.
+                    if interval_dependency_type is None:
 
-        if thirteenth_type:
+                        default_interval_type = DEFAULT_INTERVAL_TYPES.get(interval_dependency)
 
-            self.thirteenth_type: ThirteenthType = thirteenth_type or ThirteenthType.MAJOR
-            self.thirteenth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.thirteenth_type.value])
-            self.thirteenth_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.thirteenth_note)
+                        setattr(self, f"{interval_dependency}_type", default_interval_type)
+
+                        self.set_chord_factor(interval_dependency, default_interval_type)
+
+                break
+
+                
+
+    def set_chord_factor(self, interval_name: str, interval_type):
+
+        # Calculates the default note, relative to the root note.
+        note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT.get(interval_type.value))
+        
+        # Sets the default note as an instance variable.
+        setattr(self, f"{interval_name}_note", note)
+
+        # Calculates the default interval, relative to the root note.
+        interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, note)
+        
+        # Sets the default note as an instance variable.
+        setattr(self, f"{interval_name}_interval", interval)
 
 
 
@@ -236,39 +256,25 @@ class Chord:
         # Initialises the string representation of the new root note
         self.root_note: str = self.root_type.value
         # Initialises the new root index, essential to all calculate_note operations.
-        self._root_index: int = CHROMATIC_SCALE.index(self.root_note)
+        self.root_index: int = CHROMATIC_SCALE.index(self.root_note)
 
         # Calculates and directly sets the third note, relative to the new root note.
-        self.third_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.third_type.value])
+        self.third_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.third_type.value])
 
         # Calculates the directly sets the fifth note, relative to the new root note.
-        self.fifth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.fifth_type.value])
+        self.fifth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.fifth_type.value])
 
         # Stores the prefixes for each extension instance variable
-        optional_extensions = ["second", "fourth", "sixth", "seventh", "ninth", "eleventh", "thirteenth"]
+        optional_intervals = ["second", "fourth", "sixth", "seventh", "ninth", "eleventh", "thirteenth"]
 
-        for extension in optional_extensions:
+        for interval in optional_intervals:
 
             # Accesses self.second_type, self.fourth_type, self.sixth_type, self.seventh_type, self.ninth_type, self.eleventh_type, self.thirteenth_type.
-            note_type = getattr(self, f"{extension}_type")
+            note_type = getattr(self, f"{interval}_type")
 
             if note_type:
 
-                self._update_extension(extension=extension, note_type=note_type)
-
-    def _update_extension(self, extension: str, note_type):
-
-        # Calculates the updated extension note, relative to the new root note.
-        updated_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[note_type.value])
-        
-        # Sets the updated extension note instance variable.
-        setattr(self, f"{extension}_note", updated_note)
-
-        # Calculates the updated extension interval, relative to the new root note.
-        updated_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, updated_note)
-        
-        # Sets the updated extension note instance variable.
-        setattr(self, f"{extension}_interval", updated_interval)
+                self.set_chord_factor(interval, note_type)
 
     def set_third(self, new_third_type: ThirdType):
 
@@ -284,8 +290,8 @@ class Chord:
         """
 
         self.third_type: ThirdType = new_third_type
-        self.third_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.third_type.value])
-        self.third_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.third_note)
+        self.third_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.third_type.value])
+        self.third_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.third_note)
 
     def set_fifth(self, new_fifth_type: FifthType):
 
@@ -301,8 +307,8 @@ class Chord:
         """
 
         self.fifth_type: FifthType = new_fifth_type
-        self.fifth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.fifth_type.value])
-        self.fifth_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.fifth_note)
+        self.fifth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.fifth_type.value])
+        self.fifth_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.fifth_note)
 
     def set_seventh(self, new_seventh_type: Optional[SeventhType] = None):
         
@@ -323,8 +329,8 @@ class Chord:
         if new_seventh_type:
 
             # Sets the note and interval instance variables.
-            self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.seventh_type.value])
-            self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.seventh_note)
+            self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.seventh_type.value])
+            self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.seventh_note)
 
         else:
 
@@ -356,12 +362,12 @@ class Chord:
             if not self.seventh_type:
 
                 self.seventh_type: SeventhType = SeventhType.MINOR
-                self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.seventh_type.value])
-                self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.seventh_note)
+                self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.seventh_type.value])
+                self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.seventh_note)
             
             # Sets the note and interval instance variables.
-            self.ninth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.ninth_type.value])
-            self.ninth_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.ninth_note)
+            self.ninth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.ninth_type.value])
+            self.ninth_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.ninth_note)
 
         else:
 
@@ -393,19 +399,19 @@ class Chord:
             if not self.seventh_type:
 
                 self.seventh_type: SeventhType = SeventhType.MINOR
-                self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.seventh_type.value])
-                self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.seventh_note)
+                self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.seventh_type.value])
+                self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.seventh_note)
             
             # Ensures that a chord featuring an eleventh note also features a ninth note.
             if not self.ninth_type:
 
                 self.ninth_type: NinthType = NinthType.MAJOR
-                self.ninth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.ninth_type.value])
-                self.ninth_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.ninth_note)
+                self.ninth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.ninth_type.value])
+                self.ninth_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.ninth_note)
 
             # Sets the note and interval instance variables.
-            self.eleventh_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.eleventh_type.value])
-            self.eleventh_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.eleventh_note)
+            self.eleventh_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.eleventh_type.value])
+            self.eleventh_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.eleventh_note)
 
         else:
 
@@ -437,26 +443,26 @@ class Chord:
             if not self.seventh_type:
 
                 self.seventh_type: SeventhType = SeventhType.MINOR
-                self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.seventh_type.value])
-                self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.seventh_note)
+                self.seventh_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.seventh_type.value])
+                self.seventh_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.seventh_note)
 
              # Ensures that a chord featuring an thirteenth note also features a ninth note.           
             if not self.ninth_type:
 
                 self.ninth_type: NinthType = NinthType.MAJOR
-                self.ninth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.ninth_type.value])
-                self.ninth_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.ninth_note)
+                self.ninth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.ninth_type.value])
+                self.ninth_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.ninth_note)
 
             # Ensures that a chord featuring an thirteenth note also features a eleventh note.
             if not self.eleventh_type:
 
                 self.eleventh_type: EleventhType = EleventhType.PERFECT
-                self.eleventh_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.eleventh_type.value])
-                self.eleventh_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.eleventh_note)
+                self.eleventh_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.eleventh_type.value])
+                self.eleventh_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.eleventh_note)
 
             # Sets the note and interval instance variables.
-            self.thirteenth_note: str = calculate_note(CHROMATIC_SCALE, self._root_index, INTERVALS_DICT[self.thirteenth_type.value])
-            self.thirteenth_interval: int = calculate_interval(CHROMATIC_SCALE, self._root_index, self.thirteenth_note)
+            self.thirteenth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.thirteenth_type.value])
+            self.thirteenth_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.thirteenth_note)
 
         else:
 
@@ -466,52 +472,58 @@ class Chord:
 
 
 
-if __name__ == "__main__":
-
     """
-    print("--------------------")
+    def get_extension(self, extension_type) -> str:
 
-    print("Instantiate Chord object: Chord(root_type=RootType.C, thirteenth_type=ThirteenthType.MAJOR)")
+        return extension_type.value.split(sep="_")[-1]
+
+    def set_extension(self, note_type):
+
+        extension = self.get_extension(note_type)
+
+        note_type = getattr(self, f"{extension}_type")
+
+
+
+    def add_extension(self, add_type: AddType):
+
+        extension = self.get_extension(add_type)
+
+        self._add_extension(extension, add_type.value)
     
-    print("--------------------")
+    def _add_extension(self, extension, interval_type):
 
-    chord = Chord(root_type=RootType.C, thirteenth_type=ThirteenthType.MAJOR)
+        setattr(self, f"{extension}_type", interval_type)
 
-    print(f"Chord object root: {chord.root_note}")
+        added_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[interval_type])
 
-    print(f"Chord object third: {chord.third_note}")
+        setattr(self, f"{extension}_note", added_note)
 
-    print(f"Chord object fifth: {chord.fifth_note}")
+        added_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, added_note)
 
-    print(f"Chord object note signature: {chord.note_signature()}")
+        setattr(self, f"{extension}_interval", added_interval)
 
-    print(f"Chord object index signature: {chord.interval_signature()}")
 
-    print("--------------------")
 
-    print("Set new root note: chord.set_root(new_root_type=RootType.G)")
+    def remove_extension(self, remove_type: AddType):
 
-    print("--------------------")
+        extension = self.get_extension(remove_type)
 
-    chord.set_root(new_root_type=RootType.G)
+        self._remove_extension(extension)
 
-    print(f"Chord object root: {chord.root_note}")
+    def _remove_extension(self, extension):
 
-    print(f"Chord object third: {chord.third_note}")
+        setattr(self, f"{extension}_type", None)
 
-    print(f"Chord object fifth: {chord.fifth_note}")
+        setattr(self, f"{extension}_note", None)
 
-    print(f"Chord object note signature: {chord.note_signature()}")
-
-    print(f"Chord object index signature: {chord.interval_signature()}")
+        setattr(self, f"{extension}_interval", None)
 
     """
 
-    print("--------------------")
 
-    print("Instantiate Chord object: demo_without = Chord(root_type=RootType.C)")
 
-    print("set_thirteenth")
+if __name__ == "__main__":
 
     print("--------------------")
 
@@ -596,3 +608,24 @@ if __name__ == "__main__":
     print(f"With object index signature: {demo_with.interval_signature()}")
 
     print("--------------------")
+
+    """
+    demo_with.add_extension(add_type=AddType.ADD2)
+
+    print(f"With object add extension add2: {demo_with.second_note}")
+
+    print(f"With object note signature: {demo_with.note_signature()}")
+
+    print(f"With object index signature: {demo_with.interval_signature()}")
+
+    print("--------------------")
+
+    demo_with.remove_extension(remove_type=AddType.ADD9)
+
+    print(f"With object remove extension add13: {demo_with.ninth_note}")
+
+    print(f"With object note signature: {demo_with.note_signature()}")
+
+    print(f"With object index signature: {demo_with.interval_signature()}")
+
+    """
