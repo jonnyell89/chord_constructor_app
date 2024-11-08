@@ -1,8 +1,14 @@
-from typing import List, Optional
+import sys
+from pathlib import Path
+
+# Adds the project root directory to the Python path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from typing import List, Dict, Optional, Callable
 
 from app.utils import calculate_note, calculate_interval
 from app.library.enums import RootType, SecondType, ThirdType, FourthType, FifthType, SixthType, SeventhType, NinthType, EleventhType, ThirteenthType, ExtensionType, AddType
-from config.config import CHROMATIC_SCALE, INTERVAL_DICT, INTERVAL_DEPENDENCIES, DEFAULT_INTERVAL_TYPES
+from config.config import CHROMATIC_SCALE, INTERVAL_NAMES, INTERVAL_DICT, INTERVAL_DEPENDENCIES_DICT, DEFAULT_INTERVAL_TYPES
 
 class Chord:
 
@@ -82,72 +88,77 @@ class Chord:
         self.eleventh_type: Optional[EleventhType] = eleventh_type
         self.thirteenth_type: Optional[ThirteenthType] = thirteenth_type
         
-        self.set_chord_factors()
+        self.set_intervals(INTERVAL_NAMES, self._process_interval)
 
-        self.set_chord_factor_dependencies()
+        self.set_interval_dependencies(INTERVAL_DEPENDENCIES_DICT)
 
 
 
-    def set_chord_factors(self):
-
-        # Stores the names of the optional intervals.
-        interval_names: List[str] = ["second", "third", "fourth", "fifth", "sixth", "seventh", "ninth", "eleventh", "thirteenth"]
+    def set_intervals(self, interval_names: List[str], action: Callable):
 
         for interval_name in interval_names:
 
             interval_type = getattr(self, f"{interval_name}_type")
 
-            if interval_type:
+            action(interval_name, interval_type)
 
-                # Calculates the default note, relative to the root note.
-                note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT.get(interval_type.value))
-                
-                # Sets the default note as an instance variable.
-                setattr(self, f"{interval_name}_note", note)
+    def _process_interval(self, interval_name, interval_type):
 
-                # Calculates the default interval, relative to the root note.
-                interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, note)
-                
-                # Sets the default note as an instance variable.
-                setattr(self, f"{interval_name}_interval", interval)
+        if interval_type:
 
-    def set_chord_factor_dependencies(self):
+            # Calculates the default note, relative to the root note.
+            note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT.get(interval_type.value))
+            
+            # Calculates the default interval, relative to the root note.
+            interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, note)
+        
+        else:
 
-        interval_names: List[str] = ["thirteenth", "eleventh", "ninth", "seventh"]
+            note, interval = None, None
 
-        for interval_name in interval_names:
+        # Sets the default note as an instance variable.
+        setattr(self, f"{interval_name}_note", note)
+
+        # Sets the default note as an instance variable.
+        setattr(self, f"{interval_name}_interval", interval)
+
+
+
+    def set_interval_dependencies(self, interval_dependencies: Dict[str, List[str]]):
+
+        for interval_name, intervals in interval_dependencies.items():
 
             interval_type = getattr(self, f"{interval_name}_type")
 
             if interval_type:
 
-                # Retrieves the list of interval dependencies that correspond to the optional interval.
-                interval_dependencies: List[str] = INTERVAL_DEPENDENCIES.get(interval_name)
+                for interval in intervals:
 
-                for interval_dependency in interval_dependencies:
+                    interval_dependency_type = getattr(self, f"{interval}_type")
 
-                    interval_dependency_type = getattr(self, f"{interval_dependency}_type")
-
-                    # Sets a default interval if the interval dependency is unassigned.
                     if interval_dependency_type is None:
 
-                        default_interval_type = DEFAULT_INTERVAL_TYPES.get(interval_dependency)
+                        default_interval_type = DEFAULT_INTERVAL_TYPES.get(interval)
 
-                        setattr(self, f"{interval_dependency}_type", default_interval_type)
-
-                        # Calculates the default note, relative to the root note.
-                        note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT.get(default_interval_type.value))
+                        setattr(self, f"{interval}_type", default_interval_type)
                         
-                        # Sets the default note as an instance variable.
-                        setattr(self, f"{interval_dependency}_note", note)
-
-                        # Calculates the default interval, relative to the root note.
-                        interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, note)
-                        
-                        # Sets the default note as an instance variable.
-                        setattr(self, f"{interval_dependency}_interval", interval)
+                        self._process_interval_dependencies(interval, default_interval_type)
 
                 break
+
+    def _process_interval_dependencies(self, interval_name, interval_type):
+
+        # Calculates the default note, relative to the root note.
+        note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT.get(interval_type.value))
+        
+        # Sets the default note as an instance variable.
+        setattr(self, f"{interval_name}_note", note)
+
+        # Calculates the default interval, relative to the root note.
+        interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, note)
+
+        # Sets the default note as an instance variable.
+        setattr(self, f"{interval_name}_interval", interval)
 
 
 
@@ -168,3 +179,5 @@ if __name__ == "__main__":
     print(f"Demo object eleventh: {demo.eleventh_type}")
 
     print(f"Demo object thirteenth: {demo.thirteenth_type}")
+
+    print(dir(demo))

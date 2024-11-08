@@ -1,8 +1,8 @@
-from typing import List, Optional
+from typing import List, Optional, Callable
 
 from app.utils import calculate_note, calculate_interval
 from app.library.enums import RootType, SecondType, ThirdType, FourthType, FifthType, SixthType, SeventhType, NinthType, EleventhType, ThirteenthType, ExtensionType, AddType
-from config.config import CHROMATIC_SCALE, INTERVAL_DICT, INTERVAL_DEPENDENCIES, DEFAULT_INTERVAL_TYPES
+from config.config import CHROMATIC_SCALE, INTERVAL_NAMES, INTERVAL_DICT, INTERVAL_DEPENDENCIES_DICT, DEFAULT_INTERVAL_TYPES
 
 class Chord:
 
@@ -50,11 +50,11 @@ class Chord:
     """
 
     def __init__(self, 
-                 root_type: RootType = DEFAULT_INTERVAL_TYPES.get("root"),
+                 root_type: RootType = None,
                  second_type: SecondType = None, 
-                 third_type: ThirdType = DEFAULT_INTERVAL_TYPES.get("third"),
+                 third_type: ThirdType = None,
                  fourth_type: FourthType = None,
-                 fifth_type: FifthType = DEFAULT_INTERVAL_TYPES.get("fifth"),
+                 fifth_type: FifthType = None,
                  sixth_type: SixthType = None,
                  seventh_type: SeventhType = None,
                  ninth_type: NinthType = None,
@@ -62,87 +62,91 @@ class Chord:
                  thirteenth_type: ThirteenthType = None,
                  ):
 
-        # Initialises the fundamental tone of the chord.
-        self.root_type: RootType = root_type
+        # Initialises the fundamental tone of the chord, according to the user input or the default interval type.
+        self.root_type: RootType = root_type if root_type is not None else DEFAULT_INTERVAL_TYPES.get("root")        
         # Initialises the string representation of the root note.
         self.root_note: str = self.root_type.value
-        # Initialises the root index, essential to all calculate_note operations.
+        # Initialises the root index, essential to all calculation operations.
         self.root_index: int = CHROMATIC_SCALE.index(self.root_note)
 
-        # Initialises the third interval type, defaulting to major if not provided.
-        self.third_type: ThirdType = third_type
-        # Calculates the third note, relative to the root note.
-        self.third_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.third_type.value])
-        # Calculates the interval value of the third note in the chord, relative to the root note.
-        self.third_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.third_note)
+        # Initialises the third and fifth interval types, according to the user input or the default interval type.
+        self.third_type: ThirdType = third_type if third_type is not None else DEFAULT_INTERVAL_TYPES.get("third")
+        self.fifth_type: FifthType = fifth_type if fifth_type is not None else DEFAULT_INTERVAL_TYPES.get("fifth")
 
-        # Initialises the fifth interval type, defaulting to perfect if not provided.
-        self.fifth_type: FifthType = fifth_type
-        # Calculates the fifth note, relative to the root note.
-        self.fifth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.fifth_type.value])
-        # Calculates the interval value of the fifth note in the chord, relative to the root note.
-        self.fifth_interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, self.fifth_note)
+        # Initialises any optional interval types.
+        self.second_type: Optional[SecondType] = second_type
+        self.fourth_type: Optional[FourthType] = fourth_type
+        self.sixth_type: Optional[SixthType] = sixth_type
+        self.seventh_type: Optional[SeventhType] = seventh_type
+        self.ninth_type: Optional[NinthType] = ninth_type
+        self.eleventh_type: Optional[EleventhType] = eleventh_type
+        self.thirteenth_type: Optional[ThirteenthType] = thirteenth_type
+        
+        self.set_intervals(INTERVAL_NAMES, self._process_interval)
 
-        # Initialises optional interval types
-        self.second_type: Optional[SecondType] = second_type or None
-        self.fourth_type: Optional[FourthType] = fourth_type or None
-        self.sixth_type: Optional[SixthType] = sixth_type or None
-        self.seventh_type: Optional[SeventhType] = seventh_type or None
-        self.ninth_type: Optional[NinthType] = ninth_type or None
-        self.eleventh_type: Optional[EleventhType] = eleventh_type or None
-        self.thirteenth_type: Optional[ThirteenthType] = thirteenth_type or None
+        self.set_interval_dependencies(INTERVAL_DEPENDENCIES, self._process_interval_dependencies)
 
-        # Initialises optional notes
-        self.second_note: Optional[str] = None
-        self.fourth_note: Optional[str] = None
-        self.sixth_note: Optional[str] = None
-        self.seventh_note: Optional[str] = None
-        self.ninth_note: Optional[str] = None
-        self.eleventh_note: Optional[str] = None
-        self.thirteenth_note: Optional[str] = None
 
-        # Initialises optional interval values
-        self.second_interval: Optional[int] = None
-        self.fourth_interval: Optional[int] = None
-        self.sixth_interval: Optional[int] = None
-        self.seventh_interval: Optional[int] = None
-        self.ninth_interval: Optional[int] = None
-        self.eleventh_interval: Optional[int] = None
-        self.thirteenth_interval: Optional[int] = None
 
-        # Stores the names of the optional intervals.
-        optional_intervals: List[str] = ["second", "fourth", "sixth", "seventh", "ninth", "eleventh", "thirteenth"]
+    def set_intervals(self, interval_names: List[str], action: Callable):
 
-        # Ensures the interval dependencies are resolved correctly by iterating over the optional intervals in reverse order.
-        for interval_name in optional_intervals[::-1]:
-            
+        for interval_name in interval_names:
+
             interval_type = getattr(self, f"{interval_name}_type")
 
-            if interval_type:
+            action(interval_name, interval_type)
 
-                self.set_chord_factor(interval_name, interval_type)
+    def _process_interval(self, interval_name, interval_type):
 
-                # Retrieves the list of interval dependencies that correspond to the optional interval.
-                interval_dependencies: List[str] = INTERVAL_DEPENDENCIES.get(interval_name)
+        if interval_type:
 
-                for interval_dependency in interval_dependencies[::-1]:
+            # Calculates the default note, relative to the root note.
+            note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT.get(interval_type.value))
+            
+            # Calculates the default interval, relative to the root note.
+            interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, note)
+        
+        else:
 
-                    interval_dependency_type = getattr(self, f"{interval_dependency}_type")
+            note, interval = None, None
 
-                    # Sets a default interval if the interval dependency is unassigned.
-                    if interval_dependency_type is None:
+        # Sets the default note as an instance variable.
+        setattr(self, f"{interval_name}_note", note)
 
-                        default_interval_type = DEFAULT_INTERVAL_TYPES.get(interval_dependency)
+        # Sets the default note as an instance variable.
+        setattr(self, f"{interval_name}_interval", interval)
 
-                        setattr(self, f"{interval_dependency}_type", default_interval_type)
 
-                        self.set_chord_factor(interval_dependency, default_interval_type)
 
-                break
+    def set_interval_dependencies(self, interval_names: List[str], action: Callable):
 
-                
+        for interval_name in interval_names:
 
-    def set_chord_factor(self, interval_name: str, interval_type):
+            interval_type = getattr(self, f"{interval_name}_type")
+
+            action(interval_name, interval_type)
+
+            break
+
+    def _process_interval_dependencies(self, interval_name, interval_type):
+        
+        # Retrieves the list of interval dependencies that correspond to the optional interval.
+        interval_dependencies: List[str] = INTERVAL_DEPENDENCIES_DICT.get(interval_name)
+
+        for interval_dependency in interval_dependencies:
+
+            interval_dependency_type = getattr(self, f"{interval_dependency}_type")
+
+            # Sets a default interval if the interval dependency is unassigned.
+            if interval_dependency_type is None:
+
+                default_interval_type = DEFAULT_INTERVAL_TYPES.get(interval_dependency)
+
+                setattr(self, f"{interval_dependency}_type", default_interval_type)
+
+                self._set_interval_dependencies(interval_dependency, default_interval_type)
+
+    def _set_interval_dependencies(self, interval_name, interval_type):
 
         # Calculates the default note, relative to the root note.
         note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT.get(interval_type.value))
@@ -152,7 +156,7 @@ class Chord:
 
         # Calculates the default interval, relative to the root note.
         interval: int = calculate_interval(CHROMATIC_SCALE, self.root_index, note)
-        
+
         # Sets the default note as an instance variable.
         setattr(self, f"{interval_name}_interval", interval)
 
@@ -258,23 +262,9 @@ class Chord:
         # Initialises the new root index, essential to all calculate_note operations.
         self.root_index: int = CHROMATIC_SCALE.index(self.root_note)
 
-        # Calculates and directly sets the third note, relative to the new root note.
-        self.third_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.third_type.value])
+        self.set_intervals(INTERVAL_NAMES, self._process_interval)
 
-        # Calculates the directly sets the fifth note, relative to the new root note.
-        self.fifth_note: str = calculate_note(CHROMATIC_SCALE, self.root_index, INTERVAL_DICT[self.fifth_type.value])
-
-        # Stores the prefixes for each extension instance variable
-        optional_intervals = ["second", "fourth", "sixth", "seventh", "ninth", "eleventh", "thirteenth"]
-
-        for interval in optional_intervals:
-
-            # Accesses self.second_type, self.fourth_type, self.sixth_type, self.seventh_type, self.ninth_type, self.eleventh_type, self.thirteenth_type.
-            note_type = getattr(self, f"{interval}_type")
-
-            if note_type:
-
-                self.set_chord_factor(interval, note_type)
+        self.set_interval_dependencies(INTERVAL_DEPENDENCIES, self._process_interval_dependencies)
 
     def set_third(self, new_third_type: ThirdType):
 

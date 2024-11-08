@@ -6,4 +6,4 @@ __pycache__/
 venv/
 
 # Ignore the development area
-app/demo
+app/demo.py

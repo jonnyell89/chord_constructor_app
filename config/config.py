@@ -4,6 +4,8 @@ from app.library.enums import RootType, SecondType, ThirdType, FourthType, Fifth
 
 CHROMATIC_SCALE: List[str] = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 
+INTERVAL_NAMES: List[str] = ["second", "third", "fourth", "fifth", "sixth", "seventh", "ninth", "eleventh", "thirteenth"]
+
 INTERVAL_DICT: Dict[str, int] = {
     
     "unison": 0,
@@ -34,12 +36,11 @@ INTERVAL_DICT: Dict[str, int] = {
 
     }
 
-INTERVAL_DEPENDENCIES: Dict[str, List[str]] = {
+INTERVAL_DEPENDENCIES_DICT: Dict[str, List[str]] = {
 
-    "seventh": ["root", "third", "fifth"],
-    "ninth": ["root", "third", "fifth", "seventh"],
-    "eleventh": ["root", "third", "fifth", "seventh", "ninth"],
-    "thirteenth": ["root", "third", "fifth", "seventh", "ninth", "eleventh"]
+    "thirteenth": ["seventh", "ninth", "eleventh"],
+    "eleventh": ["seventh", "ninth"],
+    "ninth": ["seventh"]
 
 }
 
